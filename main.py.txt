@@ -1,0 +1,83 @@
+# main.py
+
+from telegram import Update
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
+                          ConversationHandler)
+import sqlite3
+import logging
+from config import TOKEN, DB_PATH
+
+# Logging setup
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Conversation states
+FULL_NAME, BIRTH_DATE, CAR_TYPE, CAR_YEAR, PHONE, EMAIL, LAST_KM = range(7)
+
+# ایجاد تیبل دیتابیس
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            full_name TEXT,
+            birth_date TEXT,
+            car_type TEXT,
+            car_year TEXT,
+            phone TEXT,
+            email TEXT,
+            last_km INTEGER
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+# Start command
+def start(update: Update, context):
+    update.message.reply_text("سلام! نام کامل خود را وارد کنید:")
+    return FULL_NAME
+
+def full_name(update: Update, context):
+    context.user_data['full_name'] = update.message.text
+    update.message.reply_text("تاریخ تولد را وارد کنید (مثال: 1370-01-01):")
+    return BIRTH_DATE
+
+# ذخیره اطلاعات در دیتابیس
+def save_user_to_db(user_id, user_data):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        REPLACE INTO users (user_id, full_name, birth_date, car_type, car_year, phone, email, last_km)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, user_data['full_name'], user_data['birth_date'], user_data['car_type'],
+          user_data['car_year'], user_data['phone'], user_data['email'], user_data['last_km']))
+    conn.commit()
+    conn.close()
+
+# Fallback cancel command
+def cancel(update: Update, context):
+    update.message.reply_text("عملیات لغو شد.")
+    return ConversationHandler.END
+
+# Main function
+def main():
+    init_db()
+    updater = Updater(TOKEN)
+    dp = updater.dispatcher
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            FULL_NAME: [MessageHandler(Filters.text & ~Filters.command, full_name)],
+            # سایر مراحل مشابه
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    dp.add_handler(conv_handler)
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()

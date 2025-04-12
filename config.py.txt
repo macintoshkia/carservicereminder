@@ -1,0 +1,8 @@
+# config.py
+
+TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # توکن ربات تلگرام
+DB_PATH = "users.db"  # مسیر دیتابیس SQLite
+GMAIL_ADDRESS = "your_email@gmail.com"  # ایمیل جیمیل شما
+GMAIL_PASSWORD = "your_gmail_app_password"  # رمز اپلیکیشن Gmail
+FARAZSMS_API_KEY = "YOUR_FARAZSMS_API_KEY"  # کلید API پیامک FarazSMS
+FARAZSMS_SENDER = "YOUR_SENDER_NUMBER"  # شماره فرستنده پیامک (FarazSMS)

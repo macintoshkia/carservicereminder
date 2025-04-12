@@ -1,0 +1,45 @@
+# daily_check.py
+
+import sqlite3
+from datetime import datetime
+from config import DB_PATH, GMAIL_ADDRESS, GMAIL_PASSWORD
+from sms_utils import send_sms
+import smtplib
+from email.mime.text import MIMEText
+from checklist_data import checklist, extract_km_from_range
+
+def send_email(receiver_email, subject, message):
+    """ارسال ایمیل با استفاده از SMTP Gmail"""
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
+        msg = MIMEText(message)
+        msg['Subject'] = subject
+        msg['From'] = GMAIL_ADDRESS
+        msg['To'] = receiver_email
+        server.sendmail(GMAIL_ADDRESS, receiver_email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        print(f"خطای ارسال ایمیل: {e}")
+
+def perform_check():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()
+
+    for user in users:
+        user_id, full_name, birth_date, car_type, car_year, phone, email, last_km = user
+        for item in checklist:
+            part = item["نام قطعه"]
+            km_interval = extract_km_from_range(item["زمان تعویض"])
+            if km_interval and last_km >= km_interval:
+                message = f"یادآوری: لطفا {part} را بررسی یا تعویض کنید."
+                send_sms(phone, message)
+                send_email(email, "یادآوری سرویس خودرو", message)
+
+    conn.close()
+
+if __name__ == "__main__":
+    perform_check()
